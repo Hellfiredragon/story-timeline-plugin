@@ -3,6 +3,7 @@
   "displayName": "story-timeline-plugin",
   "description": "A timeline visualization for story writing",
   "version": "0.0.1",
+  "repository": "https://github.com/Hellfiredragon/story-timeline-plugin",
   "engines": {
     "vscode": "^1.80.0"
   },
