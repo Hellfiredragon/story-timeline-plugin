@@ -45,10 +45,12 @@ export class AttributesProvider implements vscode.TreeDataProvider<string> {
 			if(split.length === 1) {
 				const char = split[0];
 				const attr = Object.keys(this.attr[char]);
+				attr.sort();
 				return Promise.resolve(attr.map(x => char + "/" + x));
 			}
 		} else {
 			const chars = Object.keys(this.attr);
+			chars.sort();
 			return Promise.resolve(chars);
 		}
 	}
@@ -129,10 +131,12 @@ export class NotesProvider implements vscode.TreeDataProvider<string> {
 			if(split.length === 1) {
 				const char = split[0];
 				const notes = this.notes[char];
+				notes.sort();
 				return Promise.resolve(notes.map(x => char + "/" + x));
 			}
 		} else {
 			const chars = Object.keys(this.notes);
+			chars.sort();
 			return Promise.resolve(chars);
 		}
 	}
