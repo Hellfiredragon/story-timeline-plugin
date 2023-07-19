@@ -2,7 +2,7 @@
   "name": "story-timeline-plugin",
   "displayName": "story-timeline-plugin",
   "description": "A timeline visualization for story writing",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "repository": "https://github.com/Hellfiredragon/story-timeline-plugin",
   "engines": {
     "vscode": "^1.80.0"
@@ -26,12 +26,6 @@
     },
     "views": {
       "story-timeline": [
-        {
-          "id": "story-timeline-attributes",
-          "name": "Attributes",
-          "icon": "media/book.svg",
-          "contextualTitle": "Attributes"
-        },
         {
           "id": "story-timeline-state",
           "name": "State",
