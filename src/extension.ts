@@ -3,15 +3,10 @@
 import exp = require('constants');
 import * as vscode from 'vscode';
 
-// const NUMBER_MATCHER = /^[+-]\s+\[(?<name>[^\]]+)\]\s+(?<num>\d+)\s*$/;
+const ATTR_REGEX = /^[+*-]\s*\[(?<char>.*?)\]\s*(?<attr>.*?)\s*:\s*[+]?(?<val>-?\d+)\s*$/;
+const NOTE_MATCHER = /^[+-]\s*\[(?<char>.*?)\]\s*(?<note>.+)\s*$/;
 
-const ATTR_REGEX = /^[+-]\s*\[(?<char>.*?)\]\s*(?<attr>.*?)\s*:\s*(?<val>\d+)\s*$/;
-
-// const TEXT_MATCHER = /^[+-]\s+\[(?<name>[^\]]+)\]\s+(?<str>.+)\s*$/;
-
-const GOAL_MATCHER = /^[+-]\s*\[(?<char>.*?)\]\s*(?<type>.*?)\s*:\s*(?<goal>.+)\s*$/;
-
-export class AttributeProvider implements vscode.TreeDataProvider<string> {
+export class AttributesProvider implements vscode.TreeDataProvider<string> {
 
 	private attr: { [char: string]: {[attr: string]: number} } = {};
 
@@ -95,9 +90,9 @@ export class AttributeProvider implements vscode.TreeDataProvider<string> {
 
 }
 
-export class GoalProvider implements vscode.TreeDataProvider<string> {
+export class NotesProvider implements vscode.TreeDataProvider<string> {
 
-	private goals: { [char: string]: string[] } = {};
+	private notes: { [char: string]: string[] } = {};
 
     private _onDidChangeTreeData: vscode.EventEmitter<string | null> = new vscode.EventEmitter<string | null>();
     readonly onDidChangeTreeData: vscode.Event<string | null> = this._onDidChangeTreeData.event;
@@ -107,7 +102,7 @@ export class GoalProvider implements vscode.TreeDataProvider<string> {
     }
 
 	clear(): void {
-		this.goals = {};
+		this.notes = {};
 	}
 
 	getTreeItem(element: string): vscode.TreeItem | Thenable<vscode.TreeItem> {
@@ -133,39 +128,37 @@ export class GoalProvider implements vscode.TreeDataProvider<string> {
 			const split = element.split("/");
 			if(split.length === 1) {
 				const char = split[0];
-				return Promise.resolve(this.goals[char].map(x => char + "/" + x));
+				const notes = this.notes[char];
+				return Promise.resolve(notes.map(x => char + "/" + x));
 			}
 		} else {
-			const chars = Object.keys(this.goals);
+			const chars = Object.keys(this.notes);
 			return Promise.resolve(chars);
 		}
 	}
 
 	textAdd(line: string) {
-		const matches = line.match(GOAL_MATCHER);
+		const matches = line.match(NOTE_MATCHER);
 		if (matches && matches.groups) {
 			const char = matches.groups["char"].trim();
-			const type = matches.groups["type"].trim();
-			const goal = matches.groups["goal"].trim();
-			if(!this.goals[char]) { this.goals[char] = []; }
-			const text = type + ": " + goal;
-			this.goals[char].push(text);
+			const note = matches.groups["note"].trim();
+			if(!this.notes[char]) { this.notes[char] = []; }
+			this.notes[char].push(note);
 			return true;
 		}
 		return false;
 	}
 
 	textRemove(line: string) {
-		const matches = line.match(GOAL_MATCHER);
+		const matches = line.match(NOTE_MATCHER);
 		if (matches && matches.groups) {
 			const char = matches.groups["char"].trim();
-			const type = matches.groups["type"].trim();
-			const goal = matches.groups["goal"].trim();
-			if(!this.goals[char]) { return true; }
-			const text = type + ": " + goal;
-			this.goals[char] = this.goals[char].filter(x => x !== text);
-			if(this.goals[char].length === 0) {
-				delete this.goals[char];
+			const note = matches.groups["note"].trim();
+			if(!this.notes[char]) { return true; }
+			this.notes[char].push(note);
+			this.notes[char] = this.notes[char].filter(x => x !== note);
+			if(this.notes[char].length === 0) {
+				delete this.notes[char];
 			}
 			return true;
 		}
@@ -173,21 +166,29 @@ export class GoalProvider implements vscode.TreeDataProvider<string> {
 	}
 }
 
-function handleLines(lines: string[], attributeProvider: AttributeProvider, goalProvider: GoalProvider) {
+function handleLines(lines: string[], attributeProvider: AttributesProvider, noteProvider: NotesProvider) {
 	attributeProvider.clear();
-	goalProvider.clear();
+	noteProvider.clear();
 	for (let line of lines) {
 		if (line === "") { continue; }
-		if (line[0] === "+") {
-			if (attributeProvider.numberAdd(line)) { continue; }
-			if (goalProvider.textAdd(line)) { continue; }
-		} else if (line[0] === "-") {
-			if (attributeProvider.numberRemove(line)) { continue; }
-			if (goalProvider.textRemove(line)) { continue; }
+		const firstChar = line[0];
+
+		switch(firstChar) {
+			case "*":
+				if (attributeProvider.numberAdd(line)) { continue; }
+				break;
+			case "+":
+				if (attributeProvider.numberAdd(line)) { continue; }
+				if (noteProvider.textAdd(line)) { continue; }
+				break;
+			case "-":
+				if (attributeProvider.numberRemove(line)) { continue; }
+				if (noteProvider.textRemove(line)) { continue; }
+				break;
 		}
 	}
 	attributeProvider.refresh();
-	goalProvider.refresh();
+	noteProvider.refresh();
 }
 
 
@@ -199,10 +200,10 @@ export function activate(context: vscode.ExtensionContext) {
 
 	activeLine = 0;
 
-	const attributeProvider = new AttributeProvider();
-	const goalProvider = new GoalProvider();
+	const attributeProvider = new AttributesProvider();
+	const noteProvider = new NotesProvider();
 	vscode.window.registerTreeDataProvider("story-timeline-attributes", attributeProvider);
-	vscode.window.registerTreeDataProvider("story-timeline-goals", goalProvider);
+	vscode.window.registerTreeDataProvider("story-timeline-notes", noteProvider);
 
 	console.log('Congratulations, your extension "StoryTimeline" is now active!');
 
@@ -216,7 +217,7 @@ export function activate(context: vscode.ExtensionContext) {
 					activeLine = line;
 
 					const linesUpToCursor = document.getText().split('\n').slice(0, line + 1);
-					handleLines(linesUpToCursor, attributeProvider, goalProvider);
+					handleLines(linesUpToCursor, attributeProvider, noteProvider);
 
 				}
 			}

@@ -26,6 +26,11 @@ Calling out known issues can help limit users opening duplicate issues against y
 
 Users appreciate release notes as you update your extension.
 
+### 0.0.2
+
+Added +- to attributes starting with *
+Simplified Goals and renamed to Notes, they recognize all lines instead of some with ':'
+
 ### 0.0.1
 
 Initial release of the Story Timeline Plugin
